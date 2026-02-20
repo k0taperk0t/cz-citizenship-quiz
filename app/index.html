@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Občanství – test (offline)</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="controls">
+        <button id="btnStart">Start</button>
+        <button id="btnPrev">Prev</button>
+        <button id="btnNext">Next</button>
+        <button id="btnResults">Results</button>
+        <div class="spacer"></div>
+        <div class="status" id="statusLine">Načítám…</div>
+      </div>
+      <div class="small" id="subStatus"></div>
+    </div>
+  </header>
+
+  <main class="container main">
+    <section class="card" id="quizPanel">
+      <div class="question-wrap">
+        <img id="questionImg" class="question-img" alt="Otázka" />
+      </div>
+      <div class="answers" id="answers">
+        <div class="answer" data-choice="A">A</div>
+        <div class="answer" data-choice="B">B</div>
+        <div class="answer" data-choice="C">C</div>
+        <div class="answer" data-choice="D">D</div>
+      </div>
+    </section>
+
+    <section class="card" id="resultsPanel">
+      <div class="container">
+        <h2 style="margin: 6px 0 0 0;">Results</h2>
+        <p id="resultsSummary" style="margin: 8px 0 12px 0;"></p>
+        <div class="results-grid" id="resultsList"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Offline PWA • Zdroj: NPI ČR (Databanka testových úloh) • Vygenerováno 2026-02-20
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
