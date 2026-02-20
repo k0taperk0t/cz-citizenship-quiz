@@ -25,14 +25,20 @@
 
   <main class="container main">
     <section class="card" id="quizPanel">
-      <div class="question-wrap">
+      <div class="q-head">
+        <div class="q-text" id="questionText"></div>
+        <button class="btn-secondary" id="btnToggleScan" type="button" aria-expanded="false">Obrázek</button>
+      </div>
+
+      <div class="question-wrap" id="scanWrap" style="display:none;">
         <img id="questionImg" class="question-img" alt="Otázka" />
       </div>
+
       <div class="answers" id="answers">
-        <div class="answer" data-choice="A">A</div>
-        <div class="answer" data-choice="B">B</div>
-        <div class="answer" data-choice="C">C</div>
-        <div class="answer" data-choice="D">D</div>
+        <button class="answer" data-choice="A" type="button"><span class="label">A</span><span class="txt" data-slot="A"></span></button>
+        <button class="answer" data-choice="B" type="button"><span class="label">B</span><span class="txt" data-slot="B"></span></button>
+        <button class="answer" data-choice="C" type="button"><span class="label">C</span><span class="txt" data-slot="C"></span></button>
+        <button class="answer" data-choice="D" type="button"><span class="label">D</span><span class="txt" data-slot="D"></span></button>
       </div>
     </section>
 

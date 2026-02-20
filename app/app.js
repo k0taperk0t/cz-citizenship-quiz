@@ -1,10 +1,14 @@
-/* Offline quiz PWA */
+/* Offline quiz PWA (CZ citizenship test)
+   - supports text questions/options + optional "scan" image fallback
+*/
+
 const state = {
   loaded: false,
   questions: [],
   order: [],
   idx: 0,
   answers: new Map(), // id -> {choice, correctBool}
+  showScan: false,
 };
 
 const el = {
@@ -12,13 +16,16 @@ const el = {
   btnPrev: document.getElementById("btnPrev"),
   btnNext: document.getElementById("btnNext"),
   btnResults: document.getElementById("btnResults"),
+  btnToggleScan: document.getElementById("btnToggleScan"),
   statusLine: document.getElementById("statusLine"),
   subStatus: document.getElementById("subStatus"),
   quizPanel: document.getElementById("quizPanel"),
   resultsPanel: document.getElementById("resultsPanel"),
+  questionText: document.getElementById("questionText"),
+  scanWrap: document.getElementById("scanWrap"),
   questionImg: document.getElementById("questionImg"),
-  answers: document.getElementById("answers"),
   answerBtns: Array.from(document.querySelectorAll(".answer")),
+  optionSlots: Array.from(document.querySelectorAll('[data-slot]')),
   resultsSummary: document.getElementById("resultsSummary"),
   resultsList: document.getElementById("resultsList"),
 };
@@ -59,6 +66,7 @@ function updateStatus() {
   el.statusLine.textContent = state.loaded
     ? `Otázka ${state.idx + 1}/${total} • Hotovo: ${done} • Zbývá: ${left}`
     : "Načítám…";
+
   const q = currentQuestion();
   if (q) {
     el.subStatus.textContent = `${q.topic} • úloha ${q.qnum} • Správně: ${correctCount()} • Špatně: ${wrongCount()}`;
@@ -79,14 +87,46 @@ function clearAnswerStyles() {
   }
 }
 
+function normalizeSpaces(s) {
+  return (s || "").replace(/\s+/g, " ").trim();
+}
+
+function shouldDefaultShowScan(q) {
+  // if any option text is empty, user likely needs the scan (image-only answers)
+  if (!q?.options) return false;
+  return q.options.some(o => !normalizeSpaces(o.text));
+}
+
 function renderQuestion() {
   const q = currentQuestion();
   if (!q) return;
+
   setPanel("quiz");
   clearAnswerStyles();
 
-  el.questionImg.src = q.img;
-  el.questionImg.alt = `Otázka ${state.idx + 1}`;
+  el.questionText.textContent = q.question ? q.question : "";
+
+  // fill options text
+  const byLabel = new Map((q.options || []).map(o => [o.label, o]));
+  for (const slot of el.optionSlots) {
+    const label = slot.getAttribute("data-slot");
+    const opt = byLabel.get(label);
+    slot.textContent = opt ? (opt.text || "") : "";
+  }
+
+  // scan toggle
+  const show = state.showScan || shouldDefaultShowScan(q);
+  el.scanWrap.style.display = show ? "flex" : "none";
+  el.btnToggleScan.setAttribute("aria-expanded", String(show));
+  el.btnToggleScan.textContent = show ? "Skrýt obrázek" : "Obrázek";
+
+  if (q.scan) {
+    el.questionImg.src = q.scan;
+    el.questionImg.alt = `Otázka ${state.idx + 1} (scan)`;
+  } else if (q.img) {
+    el.questionImg.src = q.img;
+    el.questionImg.alt = `Otázka ${state.idx + 1}`;
+  }
 
   const saved = state.answers.get(q.id);
   if (saved) {
@@ -106,6 +146,8 @@ function renderQuestion() {
 function goToIndex(i) {
   const clamped = Math.max(0, Math.min(state.order.length - 1, i));
   state.idx = clamped;
+  // reset per-question scan state
+  state.showScan = false;
   renderQuestion();
 }
 
@@ -114,138 +156,154 @@ function goPrev() { goToIndex(state.idx - 1); }
 
 function startOrReset() {
   if (!state.loaded) return;
+  if (state.answers.size > 0) {
+    const ok = confirm("Smazat odpovědi a spustit test znovu?");
+    if (!ok) return;
+  }
   state.answers.clear();
   state.order = shuffleInPlace(state.questions.map(q => q.id));
   state.idx = 0;
+  state.showScan = false;
   renderQuestion();
 }
 
-function handleChoice(choice) {
+function onAnswer(choice) {
   const q = currentQuestion();
   if (!q) return;
 
-  const isCorrect = (choice === q.correct);
-  state.answers.set(q.id, { choice, correctBool: isCorrect });
+  const correctBool = choice === q.correct;
+  state.answers.set(q.id, { choice, correctBool });
 
-  clearAnswerStyles();
-  const btn = el.answerBtns.find(b => b.dataset.choice === choice);
-  if (btn) {
-    btn.classList.add("selected");
-    btn.classList.add(isCorrect ? "correct" : "wrong");
+  // styles reset
+  for (const b of el.answerBtns) {
+    b.classList.remove("selected", "correct", "wrong", "flash-correct");
+  }
+
+  const chosenBtn = el.answerBtns.find(b => b.dataset.choice === choice);
+  const correctBtn = el.answerBtns.find(b => b.dataset.choice === q.correct);
+
+  if (chosenBtn) {
+    chosenBtn.classList.add("selected");
+    chosenBtn.classList.add(correctBool ? "correct" : "wrong");
+  }
+
+  if (!correctBool && correctBtn) {
+    // blink green on correct answer
+    // forcibly reset the animation
+    correctBtn.classList.remove("flash-correct");
+    // reflow trick
+    void correctBtn.offsetWidth;
+    correctBtn.classList.add("flash-correct");
   }
 
   updateStatus();
 
-  // auto-next only on correct
-  if (isCorrect) {
-    // small microtask so UI paints selected state on low-end devices
-    setTimeout(() => goNext(), 30);
+  if (correctBool) {
+    // auto-next only in case of right answer and if the question is not last
+    if (state.idx < state.order.length - 1) {
+      // small delay to make animation visible
+      setTimeout(() => goNext(), 250);
+    }
   }
 }
 
 function renderResults() {
-  if (!state.loaded) return;
-
   setPanel("results");
+
   const total = state.order.length;
   const ok = correctCount();
-  const no = wrongCount();
+  const bad = wrongCount();
   const done = answeredCount();
-  el.resultsSummary.textContent = `Zodpovězeno: ${done}/${total}. Správně: ${ok}. Špatně: ${no}. Nezodpovězeno: ${total - done}.`;
+  const na = total - done;
 
+  el.resultsSummary.textContent = `Správně: ${ok} • Špatně: ${bad} • Nezodpovězeno: ${na} • Celkem: ${total}`;
   el.resultsList.innerHTML = "";
 
-  // Show in the current randomized order, so clicking jumps correctly.
   state.order.forEach((qid, i) => {
     const q = state.questions.find(x => x.id === qid);
-    const a = state.answers.get(qid);
-    const isAnswered = !!a;
-    const isOk = isAnswered ? a.correctBool : null;
+    if (!q) return;
 
-    const row = document.createElement("div");
-    row.className = "result-item";
-    row.tabIndex = 0;
-    row.role = "button";
+    const ans = state.answers.get(qid);
+    const status = ans ? (ans.correctBool ? "correct" : "wrong") : "na";
+
+    const item = document.createElement("div");
+    item.className = `result-item ${status}`;
 
     const badge = document.createElement("div");
-    badge.className = "badge " + (isAnswered ? (isOk ? "ok" : "no") : "");
-    badge.textContent = isAnswered ? (isOk ? "✓" : "✕") : "–";
+    badge.className = `badge ${ans ? (ans.correctBool ? "ok" : "no") : "na"}`;
+    badge.textContent = ans ? (ans.correctBool ? "✓" : "✕") : "…";
+
+    const num = document.createElement("div");
+    num.className = "num";
+    num.textContent = String(i + 1);
 
     const text = document.createElement("div");
     text.className = "result-text";
+
     const title = document.createElement("div");
     title.style.fontWeight = "700";
-    title.textContent = `Otázka ${i + 1}/${total}`;
+    title.textContent = `${q.topic} • úloha ${q.qnum}`;
+
     const sub = document.createElement("div");
     sub.className = "small";
-    const picked = isAnswered ? `Vybral: ${a.choice}` : "Nezodpovězeno";
-    sub.textContent = `${q.topic} • úloha ${q.qnum} • ${picked} • Správně: ${q.correct}`;
+
+    if (!ans) {
+      sub.textContent = "Nezodpovězeno";
+    } else {
+      sub.textContent = `Odpověď: ${ans.choice} • Správně: ${q.correct}`;
+    }
+
     text.appendChild(title);
     text.appendChild(sub);
 
-    row.appendChild(badge);
-    row.appendChild(text);
+    item.appendChild(badge);
+    item.appendChild(num);
+    item.appendChild(text);
 
-    row.addEventListener("click", () => {
+    item.addEventListener("click", () => {
       goToIndex(i);
     });
-    row.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        goToIndex(i);
-      }
-    });
 
-    el.resultsList.appendChild(row);
+    el.resultsList.appendChild(item);
   });
 }
 
-async function init() {
-  // Service worker
-  if ("serviceWorker" in navigator) {
-    try {
-      await navigator.serviceWorker.register("./sw.js");
-    } catch (_) {}
-  }
-
-  // Load questions
-  const res = await fetch("./questions.json", { cache: "no-store" });
+async function loadQuestions() {
+  // Let service worker handle caching (Cache First).
+  const res = await fetch("questions.json");
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   state.questions = data.questions;
   state.loaded = true;
-
-  // Initialize randomized order every time app opens (requirement: always random)
-  startOrReset();
 }
 
-el.btnStart.addEventListener("click", startOrReset);
-el.btnNext.addEventListener("click", goNext);
-el.btnPrev.addEventListener("click", goPrev);
-el.btnResults.addEventListener("click", () => {
-  if (el.resultsPanel.style.display === "block") {
-    renderQuestion();
-  } else {
-    renderResults();
+function registerSW() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+}
+
+// Events
+el.btnStart.addEventListener("click", startOrReset);
+el.btnPrev.addEventListener("click", goPrev);
+el.btnNext.addEventListener("click", goNext);
+el.btnResults.addEventListener("click", renderResults);
+el.btnToggleScan.addEventListener("click", () => {
+  state.showScan = !state.showScan;
+  renderQuestion();
 });
 
-el.answers.addEventListener("click", (e) => {
-  const t = e.target.closest(".answer");
-  if (!t) return;
-  handleChoice(t.dataset.choice);
-});
+for (const b of el.answerBtns) {
+  b.addEventListener("click", () => onAnswer(b.dataset.choice));
+}
 
-document.addEventListener("keydown", (e) => {
-  if (el.resultsPanel.style.display === "block") return;
-  if (e.key === "ArrowRight") goNext();
-  if (e.key === "ArrowLeft") goPrev();
-  if (e.key === "1") handleChoice("A");
-  if (e.key === "2") handleChoice("B");
-  if (e.key === "3") handleChoice("C");
-  if (e.key === "4") handleChoice("D");
-});
-
-init().catch(err => {
-  el.statusLine.textContent = "Chyba při načítání.";
-  el.subStatus.textContent = String(err);
-});
+(async function init() {
+  registerSW();
+  try {
+    await loadQuestions();
+    startOrReset();
+  } catch (e) {
+    el.statusLine.textContent = "Chyba načítání (zkus otevřít přes http/https).";
+    console.error(e);
+  }
+})();

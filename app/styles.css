@@ -41,3 +41,41 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .badge.no { background: rgba(200,0,0,0.12); }
 .result-text { display:flex; flex-direction:column; gap: 2px; }
 footer { padding: 14px 12px; opacity: 0.7; font-size: 12px; text-align:center; }
+
+
+.q-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:12px 12px 0 12px;}
+.q-text{font-size:18px;line-height:1.35;font-weight:650;white-space:pre-wrap;flex:1 1 auto;}
+.btn-secondary{padding:8px 10px;border-radius:12px;font-weight:700;font-size:13px;opacity:0.95;}
+
+.answer{display:flex;gap:10px;align-items:flex-start;justify-content:flex-start;text-align:left;}
+.answer .label{font-weight:900;min-width:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:6px 8px;border:1px solid rgba(0,0,0,0.15);}
+@media (prefers-color-scheme: dark){.answer .label{border-color: rgba(255,255,255,0.14);}}
+.answer .txt{line-height:1.25;}
+
+.badge.na{background: rgba(120,120,120,0.10);}
+
+/* Results color hint: number itself */
+.result-item .num{font-weight:900;min-width:44px;text-align:center;}
+.result-item.correct .num{color: rgb(0,140,0);}
+.result-item.wrong .num{color: rgb(200,0,0);}
+.result-item.na .num{opacity:0.55;}
+
+.option.correct {
+  background: #16a34a;
+  color: #fff;
+}
+
+.option.wrong {
+  background: #dc2626;
+  color: #fff;
+}
+
+@keyframes flashGreen {
+  0%   { background:#16a34a; color:#fff; }
+  50%  { background:#22c55e; color:#fff; }
+  100% { background:#16a34a; color:#fff; }
+}
+
+.option.flash-correct {
+  animation: flashGreen 0.7s ease 2;
+}
