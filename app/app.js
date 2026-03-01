@@ -7,9 +7,11 @@ const state = {
   questions: [],
   order: [],
   idx: 0,
-  answers: new Map(), // id -> {choice, correctBool}
+  answers: new Map(), // id -> { firstChoice, firstCorrect }
   showScan: false,
 };
+
+let resultsOnlyWrong = false;
 
 const el = {
   btnStart: document.getElementById("btnStart"),
@@ -28,6 +30,8 @@ const el = {
   optionSlots: Array.from(document.querySelectorAll('[data-slot]')),
   resultsSummary: document.getElementById("resultsSummary"),
   resultsList: document.getElementById("resultsList"),
+  btnOnlyWrong: document.getElementById("btnOnlyWrong"),
+  btnRetryWrong: document.getElementById("btnRetryWrong"),
 };
 
 function shuffleInPlace(arr) {
@@ -49,13 +53,13 @@ function answeredCount() {
 
 function correctCount() {
   let c = 0;
-  for (const v of state.answers.values()) if (v.correctBool) c++;
+  for (const v of state.answers.values()) if (v.firstCorrect) c++;
   return c;
 }
 
 function wrongCount() {
   let w = 0;
-  for (const v of state.answers.values()) if (!v.correctBool) w++;
+  for (const v of state.answers.values()) if (!v.firstCorrect) w++;
   return w;
 }
 
@@ -171,8 +175,15 @@ function onAnswer(choice) {
   const q = currentQuestion();
   if (!q) return;
 
-  const correctBool = choice === q.correct;
-  state.answers.set(q.id, { choice, correctBool });
+  const isCorrectNow = choice === q.correct;
+
+  // remeber fix answer and not overwrite it
+  if (!state.answers.has(q.id)) {
+    state.answers.set(q.id, {
+      firstChoice: choice,
+      firstCorrect: isCorrectNow,
+    });
+  }
 
   // styles reset
   for (const b of el.answerBtns) {
@@ -184,26 +195,21 @@ function onAnswer(choice) {
 
   if (chosenBtn) {
     chosenBtn.classList.add("selected");
-    chosenBtn.classList.add(correctBool ? "correct" : "wrong");
+    chosenBtn.classList.add(isCorrectNow ? "correct" : "wrong");
   }
 
-  if (!correctBool && correctBtn) {
+  if (!isCorrectNow && correctBtn) {
     // blink green on correct answer
-    // forcibly reset the animation
     correctBtn.classList.remove("flash-correct");
-    // reflow trick
-    void correctBtn.offsetWidth;
+    void correctBtn.offsetWidth; // restart animation
     correctBtn.classList.add("flash-correct");
   }
 
   updateStatus();
 
-  if (correctBool) {
-    // auto-next only in case of right answer and if the question is not last
-    if (state.idx < state.order.length - 1) {
-      // small delay to make animation visible
-      setTimeout(() => goNext(), 250);
-    }
+  // go next only when the answer is correct
+  if (isCorrectNow && state.idx < state.order.length - 1) {
+    setTimeout(() => goNext(), 250);
   }
 }
 
@@ -223,15 +229,20 @@ function renderResults() {
     const q = state.questions.find(x => x.id === qid);
     if (!q) return;
 
-    const ans = state.answers.get(qid);
-    const status = ans ? (ans.correctBool ? "correct" : "wrong") : "na";
+    const ans = state.answers.get(qid); // { firstChoice, firstCorrect } | undefined
+
+    // Use CSS-friendly class names: "correct" | "wrong" | "na"
+    const status = ans ? (ans.firstCorrect ? "correct" : "wrong") : "na";
+
+    if (resultsOnlyWrong && status !== "wrong") return;
 
     const item = document.createElement("div");
     item.className = `result-item ${status}`;
 
     const badge = document.createElement("div");
-    badge.className = `badge ${ans ? (ans.correctBool ? "ok" : "no") : "na"}`;
-    badge.textContent = ans ? (ans.correctBool ? "✓" : "✕") : "…";
+    // Badge states: ok | no | na (matches your CSS .badge.ok/.badge.no/.badge.na)
+    badge.className = `badge ${status === "correct" ? "ok" : status === "wrong" ? "no" : "na"}`;
+    badge.textContent = status === "correct" ? "✓" : status === "wrong" ? "✕" : "…";
 
     const num = document.createElement("div");
     num.className = "num";
@@ -250,7 +261,7 @@ function renderResults() {
     if (!ans) {
       sub.textContent = "Nezodpovězeno";
     } else {
-      sub.textContent = `Odpověď: ${ans.choice} • Správně: ${q.correct}`;
+      sub.textContent = `První odpověď: ${ans.firstChoice} • Správně: ${q.correct}`;
     }
 
     text.appendChild(title);
@@ -290,6 +301,28 @@ el.btnNext.addEventListener("click", goNext);
 el.btnResults.addEventListener("click", renderResults);
 el.btnToggleScan.addEventListener("click", () => {
   state.showScan = !state.showScan;
+  renderQuestion();
+});
+el.btnOnlyWrong.addEventListener("click", () => {
+  resultsOnlyWrong = !resultsOnlyWrong;
+  el.btnOnlyWrong.textContent = resultsOnlyWrong ? "Zobrazit vše" : "Pouze chybné";
+  renderResults();
+});
+el.btnRetryWrong.addEventListener("click", () => {
+  const wrongIds = [];
+  for (const [id, rec] of state.answers.entries()) {
+    if (rec && rec.firstCorrect === false) wrongIds.push(id);
+  }
+  if (wrongIds.length === 0) {
+    alert("Žádné chyby 🎉");
+    return;
+  }
+
+  state.order = shuffleInPlace([...wrongIds]);
+  state.idx = 0;
+  state.answers.clear(); // New test
+  state.showScan = false;
+  setPanel("quiz");
   renderQuestion();
 });
 

@@ -13,9 +13,9 @@
     <div class="container">
       <div class="controls">
         <button id="btnStart">Start</button>
-        <button id="btnPrev">Prev</button>
-        <button id="btnNext">Next</button>
-        <button id="btnResults">Results</button>
+        <button id="btnPrev">Předchozí</button>
+        <button id="btnNext">Další</button>
+        <button id="btnResults">Výsledky</button>
         <div class="spacer"></div>
         <div class="status" id="statusLine">Načítám…</div>
       </div>
@@ -44,8 +44,12 @@
 
     <section class="card" id="resultsPanel">
       <div class="container">
-        <h2 style="margin: 6px 0 0 0;">Results</h2>
+        <h2 style="margin: 6px 0 0 0;">Výsledky</h2>
         <p id="resultsSummary" style="margin: 8px 0 12px 0;"></p>
+        <div class="results-controls">
+          <button id="btnOnlyWrong" type="button">Jen chybné</button>
+          <button id="btnRetryWrong" type="button">Procvičit jen chybné</button>
+        </div>
         <div class="results-grid" id="resultsList"></div>
       </div>
     </section>

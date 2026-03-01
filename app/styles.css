@@ -14,14 +14,16 @@ body {
 header {
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
+  z-index: 10;
+  background: #ffffff;
+  backdrop-filter: none;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   padding: 10px 12px;
 }
+
 @media (prefers-color-scheme: dark) {
   header {
-    background: rgba(20, 20, 20, 0.9);
+    background: #141414;
     border-bottom-color: rgba(255, 255, 255, 0.12);
   }
 }
@@ -176,6 +178,14 @@ button:disabled {
     background: rgba(25, 25, 25, 0.8);
   }
 }
+
+.results-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 12px 0;
+}
+
 .badge {
   font-weight: 800;
   width: 34px;
@@ -263,8 +273,6 @@ footer {
   background: rgba(120, 120, 120, 0.1);
 }
 
-
-
 .option.correct {
   background: #16a34a;
   color: #fff;
@@ -277,19 +285,16 @@ footer {
 
 @keyframes flashGreen {
   0% {
-    background: #16a34a;
-    color: #fff;
+    box-shadow: 0 0 0 0 rgba(0, 160, 0, 0);
   }
   50% {
-    background: #22c55e;
-    color: #fff;
+    box-shadow: 0 0 0 4px rgba(0, 160, 0, 0.35);
   }
   100% {
-    background: #16a34a;
-    color: #fff;
+    box-shadow: 0 0 0 0 rgba(0, 160, 0, 0);
   }
 }
 
-.option.flash-correct {
+.answer.flash-correct {
   animation: flashGreen 0.7s ease 2;
 }
