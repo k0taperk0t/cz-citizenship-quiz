@@ -106,11 +106,15 @@ button:disabled {
   }
 }
 .answer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
   padding: 12px;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.18);
   background: rgba(255, 255, 255, 0.85);
-  text-align: center;
   user-select: none;
 }
 @media (prefers-color-scheme: dark) {
@@ -243,13 +247,6 @@ footer {
   opacity: 0.95;
 }
 
-.answer {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  justify-content: flex-start;
-  text-align: left;
-}
 .answer .label {
   font-weight: 900;
   min-width: 22px;
@@ -271,16 +268,6 @@ footer {
 
 .badge.na {
   background: rgba(120, 120, 120, 0.1);
-}
-
-.option.correct {
-  background: #16a34a;
-  color: #fff;
-}
-
-.option.wrong {
-  background: #dc2626;
-  color: #fff;
 }
 
 @keyframes flashGreen {

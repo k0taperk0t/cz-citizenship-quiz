@@ -87,7 +87,7 @@ function setPanel(which) {
 
 function clearAnswerStyles() {
   for (const b of el.answerBtns) {
-    b.classList.remove("selected", "correct", "wrong");
+    b.classList.remove("selected", "correct", "wrong", "flash-correct");
   }
 }
 
@@ -130,16 +130,11 @@ function renderQuestion() {
   } else if (q.img) {
     el.questionImg.src = q.img;
     el.questionImg.alt = `Otázka ${state.idx + 1}`;
+  } else {
+    el.questionImg.removeAttribute("src");
+    el.questionImg.alt = "";
   }
 
-  const saved = state.answers.get(q.id);
-  if (saved) {
-    const btn = el.answerBtns.find(b => b.dataset.choice === saved.choice);
-    if (btn) {
-      btn.classList.add("selected");
-      btn.classList.add(saved.correctBool ? "correct" : "wrong");
-    }
-  }
 
   el.btnPrev.disabled = state.idx <= 0;
   el.btnNext.disabled = state.idx >= state.order.length - 1;
@@ -177,7 +172,7 @@ function onAnswer(choice) {
 
   const isCorrectNow = choice === q.correct;
 
-  // remeber fix answer and not overwrite it
+  // remember first answer and not overwrite it
   if (!state.answers.has(q.id)) {
     state.answers.set(q.id, {
       firstChoice: choice,
@@ -223,7 +218,7 @@ function renderResults() {
   const na = total - done;
 
   el.resultsSummary.textContent = `Správně: ${ok} • Špatně: ${bad} • Nezodpovězeno: ${na} • Celkem: ${total}`;
-  el.resultsList.innerHTML = "";
+  el.resultsList.replaceChildren();
 
   state.order.forEach((qid, i) => {
     const q = state.questions.find(x => x.id === qid);
@@ -305,7 +300,7 @@ el.btnToggleScan.addEventListener("click", () => {
 });
 el.btnOnlyWrong.addEventListener("click", () => {
   resultsOnlyWrong = !resultsOnlyWrong;
-  el.btnOnlyWrong.textContent = resultsOnlyWrong ? "Zobrazit vše" : "Pouze chybné";
+  el.btnOnlyWrong.textContent = resultsOnlyWrong ? "Zobrazit vše" : "Jen chybné";
   renderResults();
 });
 el.btnRetryWrong.addEventListener("click", () => {
