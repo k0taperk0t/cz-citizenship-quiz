@@ -190,15 +190,24 @@ button:disabled {
   margin: 6px 0 12px 0;
 }
 
+/* Result badge: fixed-size circle, identical for ✓ ✕ … */
 .badge {
-  font-weight: 800;
   width: 34px;
   height: 34px;
-  border-radius: 999px;
-  display: flex;
+  min-width: 34px;
+  min-height: 34px;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.18);
+
+  border-radius: 999px;
+
+  font-size: 18px;
+  line-height: 1;         /* important on iOS */
+  font-weight: 800;
+
+  flex: 0 0 34px;         /* prevents flex shrinking */
 }
 .badge.ok {
   background: rgba(0, 160, 0, 0.12);
@@ -206,6 +215,7 @@ button:disabled {
 .badge.no {
   background: rgba(200, 0, 0, 0.12);
 }
+
 .result-text {
   display: flex;
   flex-direction: column;
